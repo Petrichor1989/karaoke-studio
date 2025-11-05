@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Karaoke Studio</title>
+  <style>
+    body {
+      width: 300px;
+      padding: 20px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      margin: 0;
+    }
+    h1 {
+      font-size: 20px;
+      margin: 0 0 16px 0;
+      text-align: center;
+    }
+    .status {
+      background: rgba(255, 255, 255, 0.2);
+      padding: 12px;
+      border-radius: 8px;
+      margin-bottom: 16px;
+      text-align: center;
+    }
+    .status.active {
+      background: rgba(76, 175, 80, 0.3);
+    }
+    .instructions {
+      font-size: 13px;
+      line-height: 1.6;
+      opacity: 0.9;
+    }
+    .instructions p {
+      margin: 8px 0;
+    }
+    .instructions strong {
+      display: block;
+      margin-top: 12px;
+      margin-bottom: 4px;
+    }
+    .instructions code {
+      background: rgba(0, 0, 0, 0.2);
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-size: 12px;
+    }
+  </style>
+</head>
+<body>
+  <h1>🎤 Karaoke Studio</h1>
+  
+  <div class="status" id="status">
+    <div id="status-text">Extension Active</div>
+  </div>
+
+  <div class="instructions">
+    <p><strong>How to use:</strong></p>
+    <p>1. Go to any YouTube video</p>
+    <p>2. The karaoke overlay will appear automatically</p>
+    <p>3. Grant microphone permission when prompted</p>
+    
+    <p><strong>Features:</strong></p>
+    <p>• Real-time mic recording</p>
+    <p>• Vocal filters (pitch, reverb, echo)</p>
+    <p>• Video filters (blur, grayscale, etc.)</p>
+    <p>• Recording download</p>
+    
+    <p><strong>Tip:</strong> If the overlay doesn't appear, refresh the YouTube page.</p>
+  </div>
+
+  <script>
+    // Check if extension is active on current tab
+    chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
+      const currentTab = tabs[0];
+      const statusEl = document.getElementById('status');
+      const statusText = document.getElementById('status-text');
+      
+      if (currentTab.url && currentTab.url.includes('youtube.com/watch')) {
+        statusEl.classList.add('active');
+        statusText.textContent = '✅ Active on this YouTube video';
+      } else if (currentTab.url && currentTab.url.includes('youtube.com')) {
+        statusText.textContent = '⚠️ Go to a YouTube video page';
+      } else {
+        statusText.textContent = '⚠️ Please visit YouTube';
+      }
+    });
+  </script>
+</body>
+</html>
