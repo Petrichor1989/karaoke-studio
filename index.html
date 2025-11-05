@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Karaoke Studio</title>
+  <title>Karaoke Studio - Sing with Any YouTube Video</title>
   <link rel="stylesheet" href="app.css">
   <style>
     body {
@@ -12,18 +12,107 @@
       margin: 0;
       padding: 0;
     }
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    .header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 30px;
+      border-radius: 20px;
+      margin-bottom: 30px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    }
+    .header h1 {
+      margin: 0 0 10px 0;
+      font-size: 2.5rem;
+    }
+    .header p {
+      margin: 0;
+      opacity: 0.9;
+      font-size: 1.1rem;
+    }
+    .info-banner {
+      background: #e7f3ff;
+      border-left: 4px solid #2196F3;
+      padding: 15px 20px;
+      margin-bottom: 25px;
+      border-radius: 8px;
+    }
+    .info-banner h3 {
+      margin: 0 0 10px 0;
+      color: #1976D2;
+      font-size: 1.2rem;
+    }
+    .info-banner ul {
+      margin: 10px 0;
+      padding-left: 25px;
+    }
+    .info-banner li {
+      margin: 5px 0;
+      color: #555;
+    }
+    .tip-box {
+      background: #fff9e6;
+      border-left: 4px solid #ffa726;
+      padding: 12px 18px;
+      margin: 15px 0;
+      border-radius: 6px;
+      font-size: 0.95rem;
+    }
+    .tip-box strong {
+      color: #f57c00;
+    }
+    .video-section {
+      background: white;
+      padding: 25px;
+      border-radius: 15px;
+      box-shadow: 0 2px 15px rgba(0,0,0,0.1);
+      margin-bottom: 25px;
+    }
+    .url-input-group {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 15px;
+    }
+    .url-input-group input {
+      flex: 1;
+      padding: 12px 15px;
+      border: 2px solid #ddd;
+      border-radius: 8px;
+      font-size: 16px;
+    }
+    .url-input-group input:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+    .url-input-group button {
+      padding: 12px 30px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: transform 0.2s;
+    }
+    .url-input-group button:hover {
+      transform: translateY(-2px);
+    }
     .song-browser {
-      margin-top: 2.5rem;
-      margin-bottom: 2.5rem;
-      padding: 2rem;
+      margin-top: 40px;
+      padding: 30px;
       border-radius: 20px;
       background: #fff;
       box-shadow: 0 2px 16px rgba(40,60,120,0.08);
     }
     .genre {
-      margin-bottom: 2.5rem;
+      margin-bottom: 40px;
       border-left: 10px solid #94b2fd;
-      padding-left: 1.5rem;
+      padding-left: 25px;
     }
     .genre-pop { border-color: #f78da7; }
     .genre-rock { border-color: #95f7d6; }
@@ -34,120 +123,176 @@
       font-weight: bold;
       display: flex;
       align-items: center;
-      margin-bottom: 1.2rem;
-      gap: 0.7rem;
+      margin-bottom: 20px;
+      color: #2c3e50;
+    }
+    .genre-icon {
+      font-size: 2.5rem;
+      margin-right: 15px;
     }
     .song-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-      gap: 1rem;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 20px;
     }
     .song-card {
-      background: #f0f4fb;
-      border: 1.5px solid #dde5f7;
-      border-radius: 13px;
-      padding: 1.1rem;
-      transition: box-shadow 0.2s, transform 0.2s;
+      background: linear-gradient(135deg, #667eea22 0%, #764ba222 100%);
+      border-radius: 15px;
+      padding: 20px;
       cursor: pointer;
-      box-shadow: 0 1px 7px rgba(140, 170, 255, 0.04);
-      position: relative;
-      text-align: left;
-      display: flex;
-      flex-direction: column;
-      gap: 0.44rem;
+      transition: all 0.3s ease;
+      border: 2px solid transparent;
     }
     .song-card:hover {
-      box-shadow: 0 4px 28px rgba(140, 170, 255, 0.16);
-      background: #e5eeff;
-      transform: translateY(-3px) scale(1.03);
-      border-color: #82b1ff;
+      transform: translateY(-5px);
+      box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+      border-color: #667eea;
     }
     .song-title {
-      font-size: 1.1rem;
       font-weight: bold;
-      color: #3d4797;
+      font-size: 1.2rem;
+      margin-bottom: 8px;
+      color: #2c3e50;
     }
     .song-artist {
-      color: #6b7686;
+      color: #666;
       font-size: 1rem;
-    }
-    .song-icon {
-      font-size: 2.2rem;
-      position: absolute;
-      right: 1rem;
-      bottom: 1rem;
-      opacity: 0.18;
-      pointer-events: none;
     }
   </style>
 </head>
 <body>
   <div class="container">
-    <header>
-      <h1>🎤 Karaoke Studio</h1>
-      <p>Advanced karaoke with pitch/tempo control, effects, and recording</p>
-    </header>
-    <section class="song-browser">
-      <h2 style="font-size:2.3rem;margin-bottom:2.3rem;font-weight:700;text-align:center;">Karaoke Song Browser</h2>
-      <!-- Pop Genre -->
+    <div class="header">
+      <h1>♫ Karaoke Studio</h1>
+      <p>Sing along with any YouTube video - featuring professional vocal effects and recording!</p>
+    </div>
+
+    <div class="info-banner">
+      <h3>✨ How to Use YouTube URLs</h3>
+      <ul>
+        <li><strong>Single videos:</strong> https://www.youtube.com/watch?v=VIDEO_ID</li>
+        <li><strong>Short URLs:</strong> https://youtu.be/VIDEO_ID</li>
+        <li><strong>Playlist entries:</strong> URLs with &list= and &index= parameters work too!</li>
+        <li><strong>YouTube Music:</strong> Music video URLs are fully supported</li>
+      </ul>
+    </div>
+
+    <div class="tip-box">
+      <strong>Ὂ1 Tip:</strong> For best karaoke experience, search for "[song name] karaoke" or "[song name] instrumental" on YouTube!
+    </div>
+
+    <div class="video-section">
+      <h2>Load Your YouTube Video</h2>
+      <div class="url-input-group">
+        <input type="text" id="youtubeUrl" placeholder="Paste any YouTube URL here..." />
+        <button id="loadVideo">Load Video</button>
+      </div>
+      <div id="player"></div>
+    </div>
+
+    <div class="video-section">
+      <h2>Microphone & Vocal Controls</h2>
+      <div>
+        <button id="startMic">Start Microphone</button>
+        <button id="stopMic" disabled>Stop Microphone</button>
+      </div>
+      <div style="margin-top: 20px;">
+        <label>Volume: <input type="range" id="volume" min="0" max="2" step="0.1" value="1" /></label><br/>
+        <label>Echo: <input type="range" id="echo" min="0" max="1" step="0.1" value="0.3" /></label><br/>
+        <label>Pitch: <input type="range" id="pitch" min="-12" max="12" step="1" value="0" /></label>
+      </div>
+      <div id="waveform" style="height: 20px; background: #667eea; margin-top: 15px; border-radius: 5px;"></div>
+    </div>
+
+    <div class="video-section">
+      <h2>Recording & Webcam</h2>
+      <div>
+        <button id="startRecord" disabled>Start Recording</button>
+        <button id="stopRecord" disabled>Stop Recording</button>
+        <button id="toggleWebcam">Enable Webcam</button>
+        <button id="togglePiP" disabled>Picture-in-Picture</button>
+      </div>
+      <video id="webcam" autoplay style="display: none; margin-top: 15px; border-radius: 10px; max-width: 300px;"></video>
+    </div>
+
+    <div class="info-banner" style="background: #f3e5f5; border-color: #9c27b0;">
+      <h3>Ὠ0 Advanced Usage: Overlay & Sidebar Modes</h3>
+      <p><strong>Want karaoke controls while browsing YouTube?</strong></p>
+      <ul>
+        <li><strong>Browser Extension:</strong> Create a Chrome extension with this app in a sidebar (see README.md)</li>
+        <li><strong>Picture-in-Picture:</strong> Use browser's PiP mode (right-click video) to keep it on top</li>
+        <li><strong>Popup Window:</strong> Open this page in a small browser window and keep it on top</li>
+        <li><strong>Split Screen:</strong> Use your OS window management to snap this app alongside your browser</li>
+      </ul>
+      <p style="margin-top: 10px; font-size: 0.95rem;">Check the <strong>README.md</strong> for detailed instructions on creating browser extensions and custom implementations!</p>
+    </div>
+
+    <div class="song-browser">
+      <h2 style="text-align: center; margin-bottom: 30px; font-size: 2.5rem; color: #2c3e50;">Ἲ4 Popular Karaoke Songs</h2>
+      
       <div class="genre genre-pop">
-        <div class="genre-header">🎶 Pop</div>
+        <div class="genre-header">
+          <span class="genre-icon">Ἰ9</span> Pop Hits
+        </div>
         <div class="song-grid">
-          <!-- 50 pop songs -->
-          <div class="song-card" onclick="window.open('https://www.youtube.com/watch?v=wxyz1', '_blank')">
-            <span class="song-title">Blinding Lights</span>
-            <span class="song-artist">The Weeknd</span>
-            <span class="song-icon">🌟</span>
+          <div class="song-card" onclick="document.getElementById('youtubeUrl').value='https://www.youtube.com/watch?v=kJQP7kiw5Fk'; document.getElementById('loadVideo').click();">
+            <div class="song-title">Despacito</div>
+            <div class="song-artist">Luis Fonsi ft. Daddy Yankee</div>
           </div>
-          <div class="song-card" onclick="window.open('https://www.youtube.com/watch?v=wxyz2', '_blank')">
-            <span class="song-title">Shape of You</span>
-            <span class="song-artist">Ed Sheeran</span>
-            <span class="song-icon">🌟</span>
+          <div class="song-card" onclick="document.getElementById('youtubeUrl').value='https://www.youtube.com/watch?v=OPf0YbXqDm0'; document.getElementById('loadVideo').click();">
+            <div class="song-title">Uptown Funk</div>
+            <div class="song-artist">Mark Ronson ft. Bruno Mars</div>
           </div>
-          <!-- ...remainder of pop songs ... -->
+          <div class="song-card" onclick="document.getElementById('youtubeUrl').value='https://www.youtube.com/watch?v=RgKAFK5djSk'; document.getElementById('loadVideo').click();">
+            <div class="song-title">Waka Waka</div>
+            <div class="song-artist">Shakira</div>
+          </div>
         </div>
       </div>
-      <!-- Rock Genre -->
+
       <div class="genre genre-rock">
-        <div class="genre-header">⚡ Rock</div>
+        <div class="genre-header">
+          <span class="genre-icon">Ἳ8</span> Rock Classics
+        </div>
         <div class="song-grid">
-          <div class="song-card" onclick="window.open('https://www.youtube.com/watch?v=wxyz3', '_blank')">
-            <span class="song-title">Bohemian Rhapsody</span>
-            <span class="song-artist">Queen</span>
-            <span class="song-icon">🎸</span>
+          <div class="song-card" onclick="document.getElementById('youtubeUrl').value='https://www.youtube.com/watch?v=fJ9rUzIMcZQ'; document.getElementById('loadVideo').click();">
+            <div class="song-title">Bohemian Rhapsody</div>
+            <div class="song-artist">Queen</div>
           </div>
-          <!-- ...more rock songs ... -->
+          <div class="song-card" onclick="document.getElementById('youtubeUrl').value='https://www.youtube.com/watch?v=rY0WxgSXdEE'; document.getElementById('loadVideo').click();">
+            <div class="song-title">Don't Stop Believin'</div>
+            <div class="song-artist">Journey</div>
+          </div>
         </div>
       </div>
-      <!-- Country Genre -->
+
       <div class="genre genre-country">
-        <div class="genre-header">🤠 Country</div>
+        <div class="genre-header">
+          <span class="genre-icon">ᾒ0</span> Country Favorites
+        </div>
         <div class="song-grid">
-          <div class="song-card" onclick="window.open('https://www.youtube.com/watch?v=wxyz4', '_blank')">
-            <span class="song-title">Take Me Home, Country Roads</span>
-            <span class="song-artist">John Denver</span>
-            <span class="song-icon">🪕</span>
+          <div class="song-card" onclick="document.getElementById('youtubeUrl').value='https://www.youtube.com/watch?v=Hn-enjcgV1o'; document.getElementById('loadVideo').click();">
+            <div class="song-title">Take Me Home, Country Roads</div>
+            <div class="song-artist">John Denver</div>
           </div>
-          <!-- ...more country songs ... -->
         </div>
       </div>
-      <!-- R&B/Soul Genre -->
+
       <div class="genre genre-rnb">
-        <div class="genre-header">💜 R&B/Soul</div>
+        <div class="genre-header">
+          <span class="genre-icon">Ἳ5</span> R&B/Soul
+        </div>
         <div class="song-grid">
-          <div class="song-card" onclick="window.open('https://www.youtube.com/watch?v=wxyz5', '_blank')">
-            <span class="song-title">All of Me</span>
-            <span class="song-artist">John Legend</span>
-            <span class="song-icon">🎤</span>
+          <div class="song-card" onclick="document.getElementById('youtubeUrl').value='https://www.youtube.com/watch?v=kXYiU_JCYtU'; document.getElementById('loadVideo').click();">
+            <div class="song-title">Thinking Out Loud</div>
+            <div class="song-artist">Ed Sheeran</div>
           </div>
-          <!-- ...more R&B songs ... -->
         </div>
       </div>
-      <!-- Repeat for other genres as needed -->
-    </section>
-    <main>
-      <!-- (the rest of the app as previously) -->
-    </main>
+    </div>
   </div>
+
+  <script src="https://www.youtube.com/iframe_api"></script>
+  <script src="app.js"></script>
 </body>
 </html>
