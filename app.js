@@ -25,9 +25,17 @@ function onYouTubeIframeAPIReady() {
 // Load video from URL
 document.getElementById('loadVideo').addEventListener('click', () => {
     const url = document.getElementById('youtubeUrl').value;
-    const videoId = extractVideoId(url);
+    const result = extractVideoId(url);
     
-    if (videoId) {
+    // Clear any previous errors
+    const errorDiv = document.getElementById('urlError');
+    if (errorDiv) {
+        errorDiv.textContent = '';
+        errorDiv.style.display = 'none';
+    }
+    
+    if (result.success) {
+        const videoId = result.videoId;
         if (player) {
             player.loadVideoById(videoId);
         } else {
@@ -39,216 +47,202 @@ document.getElementById('loadVideo').addEventListener('click', () => {
                     'playsinline': 1
                 },
                 events: {
-                    'onReady': onPlayerReady,
-                    'onStateChange': onPlayerStateChange
+                    'onReady': onPlayerReady
                 }
             });
         }
     } else {
-        alert('Please enter a valid YouTube URL');
+        // Display error message
+        showError(result.error);
     }
 });
-
-function extractVideoId(url) {
-    const regExp = /^.*((youtu.be\/)|(v\/)|(\/u\/\w\/)|(embed\/)|(watch\?))?\??v?=?([^#&?]*).*/ ;
-    const match = url.match(regExp);
-    return (match && match[7].length === 11) ? match[7] : null;
-}
 
 function onPlayerReady(event) {
     console.log('Player ready');
-    initializeAudio();
 }
 
-function onPlayerStateChange(event) {
-    if (event.data === YT.PlayerState.PLAYING) {
-        document.getElementById('playPause').textContent = 'Pause';
-    } else {
-        document.getElementById('playPause').textContent = 'Play';
+// Enhanced YouTube URL extraction supporting various formats
+function extractVideoId(url) {
+    if (!url || url.trim() === '') {
+        return {
+            success: false,
+            error: 'Please enter a YouTube URL'
+        };
+    }
+    
+    try {
+        // Handle various YouTube URL formats
+        const patterns = [
+            // Standard watch URLs with optional parameters
+            /(?:youtube\.com\/watch\?v=)([a-zA-Z0-9_-]{11})(?:&.*)?/,
+            // Short URLs
+            /(?:youtu\.be\/)([a-zA-Z0-9_-]{11})(?:\?.*)?/,
+            // Embed URLs
+            /(?:youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})(?:\?.*)?/,
+            // YouTube Music URLs
+            /(?:music\.youtube\.com\/watch\?v=)([a-zA-Z0-9_-]{11})(?:&.*)?/,
+            // Mobile URLs
+            /(?:m\.youtube\.com\/watch\?v=)([a-zA-Z0-9_-]{11})(?:&.*)?/
+        ];
+        
+        for (const pattern of patterns) {
+            const match = url.match(pattern);
+            if (match && match[1]) {
+                return {
+                    success: true,
+                    videoId: match[1]
+                };
+            }
+        }
+        
+        // If no pattern matched, provide helpful error
+        return {
+            success: false,
+            error: 'Invalid YouTube URL. Please use a valid format like:\n' +
+                   '• https://www.youtube.com/watch?v=VIDEO_ID\n' +
+                   '• https://youtu.be/VIDEO_ID\n' +
+                   '• Playlist URLs with &index parameter are supported'
+        };
+    } catch (e) {
+        return {
+            success: false,
+            error: 'Error parsing URL. Please check the format and try again.'
+        };
     }
 }
 
-// Initialize Web Audio API
-function initializeAudio() {
-    if (!audioContext) {
-        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+// Show error message to user
+function showError(message) {
+    let errorDiv = document.getElementById('urlError');
+    if (!errorDiv) {
+        errorDiv = document.createElement('div');
+        errorDiv.id = 'urlError';
+        errorDiv.style.cssText = 'color: #ff4444; padding: 10px; margin: 10px 0; background: #fff0f0; border: 1px solid #ffcccc; border-radius: 4px; white-space: pre-line;';
+        const urlInput = document.getElementById('youtubeUrl');
+        urlInput.parentNode.insertBefore(errorDiv, urlInput.nextSibling);
+    }
+    errorDiv.textContent = message;
+    errorDiv.style.display = 'block';
+}
+
+// Microphone setup
+document.getElementById('startMic').addEventListener('click', async () => {
+    try {
+        micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
         
-        // Create audio nodes
+        if (!audioContext) {
+            audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        
+        micSource = audioContext.createMediaStreamSource(micStream);
         gainNode = audioContext.createGain();
+        analyser = audioContext.createAnalyser();
         
-        // EQ nodes
+        // EQ setup
         eqLow = audioContext.createBiquadFilter();
-        eqLow.type = 'lowshelf';
-        eqLow.frequency.value = 60;
-        
         eqMid = audioContext.createBiquadFilter();
+        eqHigh = audioContext.createBiquadFilter();
+        
+        eqLow.type = 'lowshelf';
+        eqLow.frequency.value = 320;
         eqMid.type = 'peaking';
         eqMid.frequency.value = 1000;
-        eqMid.Q.value = 1;
-        
-        eqHigh = audioContext.createBiquadFilter();
         eqHigh.type = 'highshelf';
-        eqHigh.frequency.value = 8000;
+        eqHigh.frequency.value = 3200;
         
-        // Delay for echo effect
+        // Delay/Echo setup
         delayNode = audioContext.createDelay();
+        const delayGain = audioContext.createGain();
         delayNode.delayTime.value = 0.3;
+        delayGain.gain.value = 0.3;
         
-        // Analyser for waveform
-        analyser = audioContext.createAnalyser();
-        analyser.fftSize = 2048;
+        // Connect nodes
+        micSource.connect(gainNode);
+        gainNode.connect(eqLow);
+        eqLow.connect(eqMid);
+        eqMid.connect(eqHigh);
+        eqHigh.connect(analyser);
+        eqHigh.connect(delayNode);
+        delayNode.connect(delayGain);
+        delayGain.connect(audioContext.destination);
+        eqHigh.connect(audioContext.destination);
         
-        // Connect microphone
-        navigator.mediaDevices.getUserMedia({ audio: true })
-            .then(stream => {
-                micStream = stream;
-                micSource = audioContext.createMediaStreamSource(stream);
-                
-                // Connect audio chain
-                micSource.connect(eqLow);
-                eqLow.connect(eqMid);
-                eqMid.connect(eqHigh);
-                eqHigh.connect(gainNode);
-                gainNode.connect(analyser);
-                analyser.connect(audioContext.destination);
-                
-                visualizeWaveform();
-            })
-            .catch(err => {
-                console.error('Microphone access denied:', err);
-                alert('Please allow microphone access to use karaoke features');
-            });
-    }
-}
-
-// Video controls
-document.getElementById('playPause').addEventListener('click', () => {
-    if (player && player.getPlayerState) {
-        const state = player.getPlayerState();
-        if (state === YT.PlayerState.PLAYING) {
-            player.pauseVideo();
-        } else {
-            player.playVideo();
-        }
+        visualizeWaveform();
+        
+        document.getElementById('startMic').disabled = true;
+        document.getElementById('stopMic').disabled = false;
+        document.getElementById('startRecord').disabled = false;
+    } catch (err) {
+        console.error('Microphone error:', err);
+        alert('Could not access microphone');
     }
 });
 
-document.getElementById('stop').addEventListener('click', () => {
-    if (player && player.stopVideo) {
-        player.stopVideo();
+document.getElementById('stopMic').addEventListener('click', () => {
+    if (micStream) {
+        micStream.getTracks().forEach(track => track.stop());
+        document.getElementById('startMic').disabled = false;
+        document.getElementById('stopMic').disabled = true;
+        document.getElementById('startRecord').disabled = true;
     }
 });
 
-// Pitch control
-document.getElementById('pitchControl').addEventListener('input', (e) => {
-    const value = e.target.value;
-    document.getElementById('pitchValue').textContent = value;
-    // Pitch shifting would require additional library like Tone.js
-    // This is a placeholder for the functionality
-});
-
-// Tempo control
-document.getElementById('tempoControl').addEventListener('input', (e) => {
-    const value = e.target.value;
-    document.getElementById('tempoValue').textContent = value;
-    if (player && player.setPlaybackRate) {
-        player.setPlaybackRate(value / 100);
-    }
-});
-
-// EQ controls
-document.getElementById('eqLow').addEventListener('input', (e) => {
-    const value = e.target.value;
-    document.getElementById('eqLowValue').textContent = value;
-    if (eqLow) eqLow.gain.value = value;
-});
-
-document.getElementById('eqMid').addEventListener('input', (e) => {
-    const value = e.target.value;
-    document.getElementById('eqMidValue').textContent = value;
-    if (eqMid) eqMid.gain.value = value;
-});
-
-document.getElementById('eqHigh').addEventListener('input', (e) => {
-    const value = e.target.value;
-    document.getElementById('eqHighValue').textContent = value;
-    if (eqHigh) eqHigh.gain.value = value;
-});
-
-// Reverb control
-document.getElementById('reverbControl').addEventListener('input', (e) => {
-    const value = e.target.value;
-    document.getElementById('reverbValue').textContent = value;
-    // Reverb implementation would require impulse response
-    // This is a placeholder
-});
-
-// Echo control
-document.getElementById('echoControl').addEventListener('input', (e) => {
-    const value = e.target.value;
-    document.getElementById('echoValue').textContent = value;
-    if (gainNode && audioContext) {
-        const echoGain = audioContext.createGain();
-        echoGain.gain.value = value / 100;
-        // Connect delay for echo effect
-    }
-});
-
-// Recording controls
-document.getElementById('startRecording').addEventListener('click', async () => {
-    if (!micStream) {
-        alert('Microphone not initialized');
-        return;
-    }
-    
+// Recording
+document.getElementById('startRecord').addEventListener('click', async () => {
     recordedChunks = [];
-    
-    // Create MediaRecorder for mic only
     const options = { mimeType: 'audio/webm' };
     mediaRecorder = new MediaRecorder(micStream, options);
     
-    mediaRecorder.ondataavailable = (e) => {
-        if (e.data.size > 0) {
-            recordedChunks.push(e.data);
+    mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+            recordedChunks.push(event.data);
         }
     };
     
     mediaRecorder.onstop = () => {
         const blob = new Blob(recordedChunks, { type: 'audio/webm' });
         const url = URL.createObjectURL(blob);
-        const audioPlayback = document.getElementById('audioPlayback');
-        audioPlayback.src = url;
-        audioPlayback.style.display = 'block';
-        document.getElementById('downloadRecording').disabled = false;
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'karaoke-recording.webm';
+        a.click();
     };
     
     mediaRecorder.start();
     isRecording = true;
-    document.getElementById('recordingStatus').textContent = 'Recording...';
-    document.getElementById('startRecording').disabled = true;
-    document.getElementById('stopRecording').disabled = false;
+    document.getElementById('startRecord').disabled = true;
+    document.getElementById('stopRecord').disabled = false;
 });
 
-document.getElementById('stopRecording').addEventListener('click', () => {
+document.getElementById('stopRecord').addEventListener('click', () => {
     if (mediaRecorder && isRecording) {
         mediaRecorder.stop();
         isRecording = false;
-        document.getElementById('recordingStatus').textContent = 'Recording stopped';
-        document.getElementById('startRecording').disabled = false;
-        document.getElementById('stopRecording').disabled = true;
+        document.getElementById('startRecord').disabled = false;
+        document.getElementById('stopRecord').disabled = true;
     }
 });
 
-document.getElementById('downloadRecording').addEventListener('click', () => {
-    const blob = new Blob(recordedChunks, { type: 'audio/webm' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `karaoke-recording-${Date.now()}.webm`;
-    a.click();
+// Audio controls
+document.getElementById('volume').addEventListener('input', (e) => {
+    if (gainNode) {
+        gainNode.gain.value = e.target.value;
+    }
 });
 
-// Webcam controls
+document.getElementById('echo').addEventListener('input', (e) => {
+    if (delayNode) {
+        const delayGain = delayNode.context.createGain();
+        delayGain.gain.value = e.target.value;
+    }
+});
+
+document.getElementById('pitch').addEventListener('input', (e) => {
+    // Pitch shifting would require additional library
+    console.log('Pitch:', e.target.value);
+});
+
+// Webcam toggle
 document.getElementById('toggleWebcam').addEventListener('click', async () => {
     if (!webcamEnabled) {
         try {
@@ -260,8 +254,8 @@ document.getElementById('toggleWebcam').addEventListener('click', async () => {
             document.getElementById('toggleWebcam').textContent = 'Disable Webcam';
             document.getElementById('togglePiP').disabled = false;
         } catch (err) {
-            console.error('Webcam access denied:', err);
-            alert('Please allow webcam access');
+            console.error('Webcam error:', err);
+            alert('Could not access webcam');
         }
     } else {
         if (webcamStream) {
