@@ -1,154 +1,70 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Karaoke Studio - Sing with Any YouTube Video</title>
-  <link rel="stylesheet" href="app.css">
-  <!-- Google Fonts for modern typography -->
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Karaoke Studio</title>
+    <link rel="stylesheet" href="app.css">
 </head>
 <body>
-  <!-- Splash Banner -->
-  <div id="splashBanner" class="splash-banner">
-    <div class="splash-content">
-      <h1>🎤 Karaoke Studio</h1>
-      <p>Transform any YouTube video into your personal karaoke stage</p>
-    </div>
-  </div>
+    <div class="container">
+        <header>
+            <h1>🎤 Karaoke Studio</h1>
+            <p class="tagline">Sing with Any YouTube Video</p>
+        </header>
 
-  <!-- Info/Error Banner -->
-  <div id="infoBanner" class="info-banner" style="display: none;">
-    <span id="bannerMessage"></span>
-    <button id="closeBanner" class="close-banner">×</button>
-  </div>
-
-  <div class="container">
-    <header>
-      <h1>🎵 Karaoke Studio</h1>
-      <p>Professional karaoke experience with any YouTube video</p>
-    </header>
-
-    <!-- YouTube URL Input -->
-    <section class="url-section">
-      <h2>Load YouTube Video</h2>
-      <div class="url-input-group">
-        <input type="text" id="youtubeUrl" placeholder="Paste YouTube URL here (e.g., https://www.youtube.com/watch?v=...)">
-        <button id="loadVideo" class="btn-primary">Load Video</button>
-      </div>
-      <div id="urlError" class="error-message"></div>
-    </section>
-
-    <!-- Video Player -->
-    <section class="player-section">
-      <div id="player"></div>
-      <video id="webcam" autoplay muted playsinline style="display: none;"></video>
-    </section>
-
-    <!-- Controls Grid -->
-    <div class="controls-grid">
-      <!-- Microphone Controls -->
-      <section class="control-card">
-        <h3>🎙️ Microphone</h3>
-        <button id="startMic" class="btn-control">Start Microphone</button>
-        <button id="stopMic" class="btn-control" disabled>Stop Microphone</button>
-        
-        <!-- Monitor Mic Toggle -->
-        <div class="toggle-group">
-          <label class="toggle-label">
-            <span>Monitor Mic (Hear Yourself)</span>
-            <input type="checkbox" id="monitorMicToggle" checked>
-            <span class="toggle-slider"></span>
-          </label>
+        <!-- Info Banner -->
+        <div id="infoBanner" class="info-banner" style="display:none;">
+            <span id="bannerMessage"></span>
         </div>
 
-        <div class="slider-group">
-          <label for="micVolume">Mic Volume: <span id="micVolumeValue">100</span>%</label>
-          <input type="range" id="micVolume" min="0" max="200" value="100" class="slider">
-        </div>
+        <!-- Video Player -->
+        <section class="player-section">
+            <div id="player" class="video-player"></div>
+        </section>
 
-        <div class="slider-group">
-          <label for="micPitch">Mic Pitch: <span id="micPitchValue">0</span> semitones</label>
-          <input type="range" id="micPitch" min="-12" max="12" value="0" class="slider">
-        </div>
-      </section>
+        <!-- Add Song Form (Condensed Single Row) -->
+        <section class="add-song-section">
+            <h2>Add Your Song</h2>
+            <div class="add-song-form">
+                <input type="text" id="songTitle" placeholder="Song Title" class="form-input">
+                <input type="text" id="songArtist" placeholder="Artist" class="form-input">
+                <input type="text" id="songUrl" placeholder="YouTube URL" class="form-input">
+                <button id="addSongBtn" class="btn-primary">➕ Add</button>
+            </div>
+        </section>
 
-      <!-- Song Controls -->
-      <section class="control-card">
-        <h3>🎵 Song</h3>
-        <div class="slider-group">
-          <label for="songVolume">Song Volume: <span id="songVolumeValue">50</span>%</label>
-          <input type="range" id="songVolume" min="0" max="100" value="50" class="slider">
-        </div>
+        <!-- Search Section -->
+        <section class="search-section">
+            <h2>Search YouTube</h2>
+            <div class="search-bar">
+                <input type="text" id="searchQuery" placeholder="Search for karaoke songs..." class="form-input">
+                <button id="searchBtn" class="btn-primary">🔍 Search</button>
+            </div>
+            <div id="searchResults" class="search-results"></div>
+        </section>
 
-        <!-- Song Pitch Slider (NEW) -->
-        <div class="slider-group">
-          <label for="songPitch">Song Pitch: <span id="songPitchValue">0</span> semitones</label>
-          <input type="range" id="songPitch" min="-12" max="12" value="0" class="slider">
-        </div>
-      </section>
+        <!-- Song Library -->
+        <section class="library-section">
+            <div class="library-header">
+                <h2>Your Song Library</h2>
+                <select id="sortBy" class="sort-select">
+                    <option value="recent">Recent</option>
+                    <option value="title">Title A-Z</option>
+                    <option value="artist">Artist A-Z</option>
+                </select>
+            </div>
+            <div id="songGrid" class="song-grid"></div>
+        </section>
 
-      <!-- Audio Effects -->
-      <section class="control-card">
-        <h3>🎚️ Effects</h3>
-        <div class="slider-group">
-          <label for="eqLow">Bass: <span id="eqLowValue">0</span> dB</label>
-          <input type="range" id="eqLow" min="-12" max="12" value="0" class="slider">
-        </div>
-
-        <div class="slider-group">
-          <label for="eqMid">Mid: <span id="eqMidValue">0</span> dB</label>
-          <input type="range" id="eqMid" min="-12" max="12" value="0" class="slider">
-        </div>
-
-        <div class="slider-group">
-          <label for="eqHigh">Treble: <span id="eqHighValue">0</span> dB</label>
-          <input type="range" id="eqHigh" min="-12" max="12" value="0" class="slider">
-        </div>
-
-        <div class="slider-group">
-          <label for="delay">Echo: <span id="delayValue">0</span>%</label>
-          <input type="range" id="delay" min="0" max="100" value="0" class="slider">
-        </div>
-
-        <div class="slider-group">
-          <label for="reverb">Reverb: <span id="reverbValue">0</span>%</label>
-          <input type="range" id="reverb" min="0" max="100" value="0" class="slider">
-        </div>
-      </section>
+        <!-- Player Controls -->
+        <section class="controls-section">
+            <button id="prevBtn" class="btn-control">⏪ Prev</button>
+            <button id="playPauseBtn" class="btn-control">▶️ Play</button>
+            <button id="nextBtn" class="btn-control">⏩ Next</button>
+        </section>
     </div>
 
-    <!-- Recording Controls -->
-    <section class="recording-section">
-      <h3>🎬 Recording</h3>
-      <div class="recording-controls">
-        <button id="startRecording" class="btn-record" disabled>Start Recording</button>
-        <button id="stopRecording" class="btn-record" disabled>Stop Recording</button>
-        <button id="downloadRecording" class="btn-record" disabled>Download Recording</button>
-      </div>
-      <div class="waveform-container">
-        <div id="waveform" class="waveform"></div>
-      </div>
-    </section>
-
-    <!-- Webcam Controls -->
-    <section class="webcam-section">
-      <h3>📹 Webcam</h3>
-      <div class="webcam-controls">
-        <button id="toggleWebcam" class="btn-control">Enable Webcam</button>
-        <button id="togglePiP" class="btn-control" disabled>Picture-in-Picture</button>
-      </div>
-    </section>
-
-    <footer>
-      <p>Built with ❤️ for karaoke enthusiasts • Use YouTube videos responsibly</p>
-    </footer>
-  </div>
-
-  <!-- Scripts -->
-  <script src="https://www.youtube.com/iframe_api"></script>
-  <!-- SoundTouch.js for pitch shifting without tempo change -->
-  <script src="https://cdn.jsdelivr.net/npm/soundtouchjs@0.1.30/dist/soundtouch.min.js"></script>
-  <script src="app.js"></script>
+    <script src="app.js"></script>
 </body>
 </html>
