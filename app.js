@@ -80,21 +80,19 @@ function searchYoutube() {
     }
 
     const searchResults = document.getElementById('searchResults');
-    searchResults.innerHTML = '<div class="search-loading">🔍 Searching YouTube (mock results)...</div>';
-    
-    setTimeout(() => {
-        const mockResults = [
-            { title: `${query} - Karaoke Version`, artist: 'Various Artists', url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ' },
-            { title: `${query} - Official Karaoke`, artist: 'Karaoke Channel', url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ' }
-        ];
-        
-        let html = '<div class="search-results-container">';
-        mockResults.forEach(result => {
-            html += `<div class="search-result-card"><div class="result-title">${result.title}</div><div class="result-artist">${result.artist}</div><button onclick="quickAddSong('${result.title}', '${result.artist}', '${result.url}')">Quick Add</button></div>`;
-        });
-        html += '</div>';
-        searchResults.innerHTML = html;
-    }, 500);
+    searchResults.innerHTML = `
+        <div style="padding: 20px; background: rgba(255, 255, 255, 0.1); border-radius: 8px; text-align: center;">
+            <p style="margin-bottom: 10px;">🔍 YouTube Search requires an API key</p>
+            <p style="font-size: 0.9em; opacity: 0.8;">To enable search, you would need to:</p>
+            <ul style="text-align: left; max-width: 400px; margin: 15px auto; line-height: 1.6;">
+                <li>Create a project in Google Cloud Console</li>
+                <li>Enable YouTube Data API v3</li>
+                <li>Generate an API key</li>
+                <li>Add the key to the application code</li>
+            </ul>
+            <p style="font-size: 0.9em; opacity: 0.8; margin-top: 15px;">For now, you can manually add songs using YouTube URLs from youtube.com</p>
+        </div>
+    `;
 }
 
 function quickAddSong(title, artist, url) {
@@ -180,11 +178,20 @@ function initializePlayer(videoId) {
     }
     
     player = new YT.Player('player', {
-        height: '315',
+        height: '100%',
         width: '100%',
         videoId: videoId,
-        playerVars: { 'autoplay': 1, 'controls': 1, 'rel': 0 },
-        events: { 'onReady': onPlayerReady, 'onStateChange': onPlayerStateChange }
+        playerVars: { 
+            'autoplay': 1, 
+            'controls': 1, 
+            'rel': 0,
+            'modestbranding': 1
+        },
+        events: { 
+            'onReady': onPlayerReady, 
+            'onStateChange': onPlayerStateChange,
+            'onError': onPlayerError
+        }
     });
 }
 
@@ -201,6 +208,11 @@ function onPlayerStateChange(event) {
     } else if (event.data === YT.PlayerState.PAUSED) {
         if (playPauseBtn) playPauseBtn.textContent = '▶️ Play';
     }
+}
+
+function onPlayerError(event) {
+    console.error('YouTube Player Error:', event.data);
+    showBanner('Error loading video. Please try another video.', 'error');
 }
 
 function extractVideoId(url) {
@@ -225,6 +237,7 @@ function togglePlayPause() {
         showBanner('No video loaded', 'error');
         return;
     }
+
     const state = player.getPlayerState();
     if (state === YT.PlayerState.PLAYING) {
         player.pauseVideo();
