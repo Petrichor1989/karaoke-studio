@@ -9,22 +9,31 @@ let recordedChunks = [];
 let isRecording = false;
 let webcamStream;
 let webcamEnabled = false;
-
 // Audio nodes
 let gainNode;
 let eqLow, eqMid, eqHigh;
 let delayNode;
 let convolverNode;
 let pitchShifter;
-
 // Song library data
 let songLibrary = JSON.parse(localStorage.getItem('songLibrary')) || [];
 let filteredSongs = [];
+
+// Recognized channel list for badges
+const RECOGNIZED_KARAOKE_CHANNELS = [
+  'KaraFun', 'Sing King', 'Party Tyme'
+];
+const RECOGNIZED_CHANNEL_PATTERNS = [
+  /karafun/i,
+  /sing\s*king/i,
+  /party\s*tyme/i
+];
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', function() {
     initializeEventListeners();
     renderSongGrid();
+    setupLinkRestructureHelper();
 });
 
 // Initialize all event listeners
@@ -34,30 +43,17 @@ function initializeEventListeners() {
     if (addSongBtn) {
         addSongBtn.addEventListener('click', addSongToLibrary);
     }
-
     // Search functionality
     const searchBtn = document.getElementById('searchBtn');
     if (searchBtn) {
         searchBtn.addEventListener('click', searchYoutube);
     }
-
     const searchQuery = document.getElementById('searchQuery');
     if (searchQuery) {
         searchQuery.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') searchYoutube();
         });
     }
-
-    // Filter and sort
-    const channelFilter = document.getElementById('channelFilter');
-    const sortBy = document.getElementById('sortBy');
-    if (channelFilter) {
-        channelFilter.addEventListener('change', renderSongGrid);
-    }
-    if (sortBy) {
-        sortBy.addEventListener('change', renderSongGrid);
-    }
-
     // Player controls
     const playPauseBtn = document.getElementById('playPauseBtn');
     const prevBtn = document.getElementById('prevBtn');
@@ -65,83 +61,95 @@ function initializeEventListeners() {
     if (playPauseBtn) playPauseBtn.addEventListener('click', togglePlayPause);
     if (prevBtn) prevBtn.addEventListener('click', playPrevious);
     if (nextBtn) nextBtn.addEventListener('click', playNext);
+}
 
-    // Banner close
-    const closeBanner = document.getElementById('closeBanner');
-    if (closeBanner) {
-        closeBanner.addEventListener('click', () => {
-            document.getElementById('infoBanner').style.display = 'none';
+// Helper for link restructure UI
+function setupLinkRestructureHelper() {
+    const box = document.getElementById('linkRestructureBox');
+    const btn = document.getElementById('restructureLinkBtn');
+    const output = document.getElementById('restructuredLinkOutput');
+    const warning = document.getElementById('linkChannelWarning');
+    if (box && btn && output && warning) {
+        btn.addEventListener('click', function() {
+            const rawLink = box.value.trim();
+            const fixedLink = restructureYoutubeLink(rawLink);
+            output.value = fixedLink;
+            const channel = getChannelName(rawLink);
+            if (channel) {
+                warning.innerHTML = `<span class='badge badge-success'>${channel}</span>`;
+            } else {
+                warning.innerHTML = `<span class='badge badge-info'>Unrecognized channel or link</span> `;
+            }
         });
     }
 }
-
-// Add song to library with channel validation
+function restructureYoutubeLink(link) {
+    // Accepts typical formats, returns 'https://www.youtube.com/watch?v=XXXXX'
+    let id = extractVideoId(link);
+    if (id) {
+        return `https://www.youtube.com/watch?v=${id}`;
+    }
+    return link;
+}
+function getChannelName(link, songChannel) {
+    let text = songChannel || link;
+    for (let i=0; i < RECOGNIZED_CHANNEL_PATTERNS.length; ++i) {
+        if (RECOGNIZED_CHANNEL_PATTERNS[i].test(text)) return RECOGNIZED_KARAOKE_CHANNELS[i];
+    }
+    return null;
+}
+// Add song to library (allow any valid YouTube karaoke link)
 function addSongToLibrary() {
     const title = document.getElementById('songTitle').value.trim();
     const artist = document.getElementById('songArtist').value.trim();
-    const url = document.getElementById('songUrl').value.trim();
-    const channel = document.getElementById('songChannel').value;
-
-    // Validation
-    if (!title || !artist || !url || !channel) {
+    const urlInput = document.getElementById('songUrl').value.trim();
+    const channelInput = document.getElementById('songChannel').value;
+    let url = restructureYoutubeLink(urlInput);
+    let channel = getChannelName(urlInput, channelInput);
+    if (!title || !artist || !url) {
         showBanner('Please fill in all fields', 'error');
         return;
     }
-
-    // Validate YouTube URL
     if (!isValidYoutubeUrl(url)) {
         showBanner('Invalid YouTube URL', 'error');
         return;
     }
-
-    // Add to library
     const song = {
         id: Date.now(),
         title: title,
         artist: artist,
         url: url,
-        channel: channel,
+        channel: channel || channelInput || 'Other',
         addedAt: new Date().toISOString()
     };
-
     songLibrary.unshift(song);
     localStorage.setItem('songLibrary', JSON.stringify(songLibrary));
-
-    // Clear inputs
     document.getElementById('songTitle').value = '';
     document.getElementById('songArtist').value = '';
     document.getElementById('songUrl').value = '';
     document.getElementById('songChannel').value = '';
-
     showBanner(`Added "${title}" by ${artist}`, 'success');
     renderSongGrid();
 }
-
 // Smart search on YouTube
 function searchYoutube() {
     const query = document.getElementById('searchQuery').value.trim();
-    
     if (!query) {
         showBanner('Enter a search query', 'error');
         return;
     }
-
     const searchResults = document.getElementById('searchResults');
     searchResults.innerHTML = '<div class="loading">🔍 Searching YouTube (mock results)...</div>';
-
-    // Simulate YouTube search results
     setTimeout(() => {
         const mockResults = [
             { title: `${query} - Karaoke Version`, artist: 'Various Artists', url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ' },
             { title: `${query} - Official Karaoke`, artist: 'Karaoke Channel', url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ' }
         ];
-
         let html = '<div style="display: grid; gap: 10px;">';
         mockResults.forEach(result => {
             html += `
                 <div class="song-card">
-                    <h3>${result.title}</h3>
-                    <p class="artist">${result.artist}</p>
+                    ${result.title}<p class="artist">${result.artist}</p>
                     <button class="btn" onclick="quickAddSong('${result.title}', '${result.artist}', '${result.url}')">Quick Add</button>
                 </div>
             `;
@@ -150,30 +158,24 @@ function searchYoutube() {
         searchResults.innerHTML = html;
     }, 500);
 }
-
-// Quick add from search results
 function quickAddSong(title, artist, url) {
     document.getElementById('songTitle').value = title;
     document.getElementById('songArtist').value = artist;
     document.getElementById('songUrl').value = url;
-    document.getElementById('songChannel').value = 'KaraFun';
+    document.getElementById('songChannel').value = getChannelName(url) || '';
     document.getElementById('searchResults').innerHTML = '';
     showBanner('Fill in channel and add the song', 'info');
 }
-
-// Render song grid with filtering and sorting
+// Render song grid with filter, sorting, badges
 function renderSongGrid() {
     const songGrid = document.getElementById('songGrid');
-    const channelFilter = document.getElementById('channelFilter').value;
-    const sortBy = document.getElementById('sortBy').value;
-
-    // Filter songs
+    // You may have channelFilter and sortBy dropdowns as in original
+    const channelFilter = document.getElementById('channelFilter') && document.getElementById('channelFilter').value;
+    const sortBy = document.getElementById('sortBy') && document.getElementById('sortBy').value;
     let filtered = songLibrary;
-    if (channelFilter !== 'all') {
-        filtered = songLibrary.filter(song => song.channel === channelFilter);
+    if (channelFilter && channelFilter !== 'all') {
+        filtered = filtered.filter(song => song.channel === channelFilter);
     }
-
-    // Sort songs
     if (sortBy === 'title') {
         filtered.sort((a, b) => a.title.localeCompare(b.title));
     } else if (sortBy === 'artist') {
@@ -181,33 +183,31 @@ function renderSongGrid() {
     } else if (sortBy === 'recent') {
         filtered.sort((a, b) => new Date(b.addedAt) - new Date(a.addedAt));
     }
-
     filteredSongs = filtered;
-
     // Render grid
     if (filtered.length === 0) {
         songGrid.innerHTML = '<div class="loading">No songs in library. Add some to get started!</div>';
         return;
     }
-
     let html = '';
     filtered.forEach(song => {
+        let badgeHtml = '';
+        let recognized = getChannelName('', song.channel);
+        if (recognized) {
+            badgeHtml = `<span class='badge badge-success'>${recognized}</span>`;
+        } else {
+            badgeHtml = `<span class='badge badge-info'>Other/Unrecognized</span>`;
+        }
         html += `
             <div class="song-card" onclick="loadSongToPlayer('${song.url}')">
-                <button class="delete-btn" onclick="deleteSong(${song.id}, event)">🗑️</button>
-                <h3>${escapeHtml(song.title)}</h3>
-                <p class="artist">${escapeHtml(song.artist)}</p>
-                <div class="info">
-                    <span class="channel">${escapeHtml(song.channel)}</span>
-                    <span>${formatDate(song.addedAt)}</span>
-                </div>
+               <button class="delete-btn" onclick="deleteSong(${song.id}, event)">🗑️</button>
+               ${escapeHtml(song.title)}<p class="artist">${escapeHtml(song.artist)}</p>
+               <div class="info">${badgeHtml} ${escapeHtml(song.channel)} ${formatDate(song.addedAt)}</div>
             </div>
         `;
     });
     songGrid.innerHTML = html;
 }
-
-// Delete song from library
 function deleteSong(id, event) {
     event.stopPropagation();
     if (confirm('Are you sure you want to delete this song?')) {
@@ -217,8 +217,6 @@ function deleteSong(id, event) {
         showBanner('Song deleted', 'success');
     }
 }
-
-// Load song to player
 function loadSongToPlayer(url) {
     const videoId = extractVideoId(url);
     if (videoId) {
@@ -227,54 +225,41 @@ function loadSongToPlayer(url) {
         showBanner('Invalid video URL', 'error');
     }
 }
-
-// Load YouTube player
 function loadPlayer(videoId) {
     const playerDiv = document.getElementById('player');
-    playerDiv.innerHTML = `<iframe width="100%" height="100%" src="https://www.youtube.com/embed/${videoId}" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>`;
+    playerDiv.innerHTML = `<iframe allow="autoplay; encrypted-media" allowfullscreen frameborder="0" height="100%" src="https://www.youtube.com/embed/${videoId}" width="100%"></iframe>`;
 }
-
-// Extract YouTube video ID
 function extractVideoId(url) {
     const patterns = [
         /youtube\.com\/watch\?v=([a-zA-Z0-9_-]{11})/,
         /youtu\.be\/([a-zA-Z0-9_-]{11})/,
         /^([a-zA-Z0-9_-]{11})$/
     ];
-
     for (let pattern of patterns) {
         const match = url.match(pattern);
         if (match) return match[1];
     }
     return null;
 }
-
-// Validate YouTube URL
 function isValidYoutubeUrl(url) {
     return /^(https?:\/\/)?(www\.)?(youtube|youtu|youtube-nocookie)\.(com|be)\//.test(url) || /^[a-zA-Z0-9_-]{11}$/.test(url);
 }
-
-// Player controls
 function togglePlayPause() {
     const btn = document.getElementById('playPauseBtn');
     btn.textContent = btn.textContent.includes('Pause') ? '▶️ Play' : '⏸️ Pause';
 }
-
 function playPrevious() {
     if (filteredSongs.length > 0) {
         const randomSong = filteredSongs[Math.floor(Math.random() * filteredSongs.length)];
         loadSongToPlayer(randomSong.url);
     }
 }
-
 function playNext() {
     if (filteredSongs.length > 0) {
         const randomSong = filteredSongs[Math.floor(Math.random() * filteredSongs.length)];
         loadSongToPlayer(randomSong.url);
     }
 }
-
-// Show banner message
 function showBanner(message, type = 'info') {
     const banner = document.getElementById('infoBanner');
     const bannerMessage = document.getElementById('bannerMessage');
@@ -285,25 +270,15 @@ function showBanner(message, type = 'info') {
         banner.style.display = 'none';
     }, 4000);
 }
-
-// Format date
 function formatDate(isoDate) {
     const date = new Date(isoDate);
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
-
-// Escape HTML
 function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
 }
-
-// Initialize YouTube API
 function onYouTubeIframeAPIReady() {
     console.log('YouTube API Ready');
 }
-
-
-
-
