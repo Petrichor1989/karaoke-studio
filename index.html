@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Karaoke Studio</title>
+    <link rel="stylesheet" href="app.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🎤 Karaoke Studio</h1>
+            <p>Advanced karaoke with pitch/tempo control, effects, and recording</p>
+        </header>
+
+        <main>
+            <section class="video-section">
+                <h2>YouTube Video Player</h2>
+                <div class="url-input-group">
+                    <input type="text" id="youtubeUrl" placeholder="Paste YouTube URL here" />
+                    <button id="loadVideo">Load Video</button>
+                </div>
+                <div id="player-wrapper">
+                    <div id="player"></div>
+                    <video id="webcam" autoplay muted></video>
+                </div>
+                <div class="video-controls">
+                    <button id="playPause">Play</button>
+                    <button id="stop">Stop</button>
+                    <input type="range" id="videoSeek" min="0" max="100" value="0" />
+                    <span id="timeDisplay">0:00 / 0:00</span>
+                </div>
+            </section>
+
+            <section class="controls-section">
+                <div class="control-group">
+                    <h3>🎵 Pitch & Tempo</h3>
+                    <label>
+                        Pitch: <span id="pitchValue">0</span> semitones
+                        <input type="range" id="pitchControl" min="-12" max="12" value="0" step="1" />
+                    </label>
+                    <label>
+                        Tempo: <span id="tempoValue">100</span>%
+                        <input type="range" id="tempoControl" min="50" max="150" value="100" step="1" />
+                    </label>
+                </div>
+
+                <div class="control-group">
+                    <h3>🎚️ Advanced EQ</h3>
+                    <label>
+                        Low (60Hz): <span id="eqLowValue">0</span> dB
+                        <input type="range" id="eqLow" min="-12" max="12" value="0" step="1" />
+                    </label>
+                    <label>
+                        Mid (1kHz): <span id="eqMidValue">0</span> dB
+                        <input type="range" id="eqMid" min="-12" max="12" value="0" step="1" />
+                    </label>
+                    <label>
+                        High (8kHz): <span id="eqHighValue">0</span> dB
+                        <input type="range" id="eqHigh" min="-12" max="12" value="0" step="1" />
+                    </label>
+                </div>
+
+                <div class="control-group">
+                    <h3>✨ Effects</h3>
+                    <label>
+                        Reverb: <span id="reverbValue">0</span>%
+                        <input type="range" id="reverbControl" min="0" max="100" value="0" step="1" />
+                    </label>
+                    <label>
+                        Echo: <span id="echoValue">0</span>%
+                        <input type="range" id="echoControl" min="0" max="100" value="0" step="1" />
+                    </label>
+                    <label>
+                        <input type="checkbox" id="autoTune" />
+                        Auto-tune
+                    </label>
+                </div>
+            </section>
+
+            <section class="recording-section">
+                <h2>🎤 Mic Recording</h2>
+                <div class="recording-controls">
+                    <button id="startRecording" class="rec-btn">Start Recording</button>
+                    <button id="stopRecording" class="rec-btn" disabled>Stop Recording</button>
+                    <button id="downloadRecording" class="rec-btn" disabled>Download Recording</button>
+                </div>
+                <div class="recording-status">
+                    <span id="recordingStatus">Ready to record</span>
+                    <div id="waveform"></div>
+                </div>
+                <audio id="audioPlayback" controls style="width: 100%; margin-top: 10px; display: none;"></audio>
+            </section>
+
+            <section class="webcam-section">
+                <h2>📹 Webcam</h2>
+                <div class="webcam-controls">
+                    <button id="toggleWebcam">Enable Webcam</button>
+                    <button id="togglePiP" disabled>Toggle Picture-in-Picture</button>
+                </div>
+            </section>
+        </main>
+
+        <footer>
+            <p>Karaoke Studio © 2025 | Built with Web Audio API & YouTube IFrame API</p>
+        </footer>
+    </div>
+
+    <script src="https://www.youtube.com/iframe_api"></script>
+    <script src="app.js"></script>
+</body>
+</html>
