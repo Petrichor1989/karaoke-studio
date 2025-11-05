@@ -3,6 +3,11 @@ let player;
 let songLibrary = JSON.parse(localStorage.getItem('songLibrary')) || [];
 let filteredSongs = [];
 let currentVideoId = null;
+let youtubeApiReady = false;
+let pendingVideoId = null;
+
+// YouTube API Key
+const YOUTUBE_API_KEY = 'AIzaSyAMeMjRRVLJNpXrrjbHoWHmirkFAjv_NBs';
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', function() {
@@ -71,7 +76,7 @@ function addSongToLibrary() {
     renderSongGrid();
 }
 
-function searchYoutube() {
+async function searchYoutube() {
     const query = document.getElementById('searchQuery').value.trim();
     
     if (!query) {
@@ -80,19 +85,46 @@ function searchYoutube() {
     }
 
     const searchResults = document.getElementById('searchResults');
-    searchResults.innerHTML = `
-        <div style="padding: 20px; background: rgba(255, 255, 255, 0.1); border-radius: 8px; text-align: center;">
-            <p style="margin-bottom: 10px;">🔍 YouTube Search requires an API key</p>
-            <p style="font-size: 0.9em; opacity: 0.8;">To enable search, you would need to:</p>
-            <ul style="text-align: left; max-width: 400px; margin: 15px auto; line-height: 1.6;">
-                <li>Create a project in Google Cloud Console</li>
-                <li>Enable YouTube Data API v3</li>
-                <li>Generate an API key</li>
-                <li>Add the key to the application code</li>
-            </ul>
-            <p style="font-size: 0.9em; opacity: 0.8; margin-top: 15px;">For now, you can manually add songs using YouTube URLs from youtube.com</p>
-        </div>
-    `;
+    searchResults.innerHTML = '<div class="search-loading">🔍 Searching YouTube...</div>';
+    
+    try {
+        const response = await fetch(
+            `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(query + ' karaoke')}&type=video&maxResults=10&key=${YOUTUBE_API_KEY}`
+        );
+        
+        if (!response.ok) {
+            throw new Error('Search failed');
+        }
+        
+        const data = await response.json();
+        
+        if (!data.items || data.items.length === 0) {
+            searchResults.innerHTML = '<div style="padding: 20px; text-align: center;">No results found. Try a different search term.</div>';
+            return;
+        }
+        
+        let html = '<div class="search-results-container">';
+        data.items.forEach(item => {
+            const title = item.snippet.title;
+            const channelTitle = item.snippet.channelTitle;
+            const videoId = item.id.videoId;
+            const url = `https://www.youtube.com/watch?v=${videoId}`;
+            
+            html += `
+                <div class="search-result-card">
+                    <div class="result-title">${escapeHtml(title)}</div>
+                    <div class="result-artist">${escapeHtml(channelTitle)}</div>
+                    <button onclick="quickAddSong('${escapeHtml(title).replace(/'/g, "\\'")}', '${escapeHtml(channelTitle).replace(/'/g, "\\'")}', '${url}')">Quick Add</button>
+                </div>
+            `;
+        });
+        html += '</div>';
+        searchResults.innerHTML = html;
+        
+    } catch (error) {
+        console.error('YouTube search error:', error);
+        searchResults.innerHTML = '<div style="padding: 20px; background: rgba(255, 100, 100, 0.2); border-radius: 8px; text-align: center;">❌ Search failed. Please try again.</div>';
+    }
 }
 
 function quickAddSong(title, artist, url) {
@@ -144,37 +176,42 @@ function deleteSong(id, event) {
 
 function loadSongToPlayer(url) {
     const videoId = extractVideoId(url);
-    if (videoId) {
-        loadPlayer(videoId);
-    } else {
+    if (!videoId) {
         showBanner('Invalid video URL', 'error');
+        return;
+    }
+    
+    if (youtubeApiReady) {
+        initializePlayer(videoId);
+    } else {
+        pendingVideoId = videoId;
+        showBanner('Loading YouTube player...', 'info');
     }
 }
 
 // YouTube IFrame API Integration
 function onYouTubeIframeAPIReady() {
     console.log('YouTube IFrame API is ready');
-    if (currentVideoId) {
-        initializePlayer(currentVideoId);
-    }
-}
-
-function loadPlayer(videoId) {
-    currentVideoId = videoId;
+    youtubeApiReady = true;
     
-    if (typeof YT !== 'undefined' && YT.Player) {
-        initializePlayer(videoId);
-    } else {
-        console.log('Waiting for YouTube API to load...');
-        showBanner('Loading video player...', 'info');
+    if (pendingVideoId) {
+        initializePlayer(pendingVideoId);
+        pendingVideoId = null;
     }
 }
 
 function initializePlayer(videoId) {
-    if (player && player.loadVideoById) {
+    currentVideoId = videoId;
+    
+    if (player && typeof player.loadVideoById === 'function') {
         player.loadVideoById(videoId);
         showBanner('Video loaded', 'success');
         return;
+    }
+    
+    // Destroy old player if exists
+    if (player && typeof player.destroy === 'function') {
+        player.destroy();
     }
     
     player = new YT.Player('player', {
@@ -185,7 +222,8 @@ function initializePlayer(videoId) {
             'autoplay': 1, 
             'controls': 1, 
             'rel': 0,
-            'modestbranding': 1
+            'modestbranding': 1,
+            'enablejsapi': 1
         },
         events: { 
             'onReady': onPlayerReady, 
@@ -197,7 +235,7 @@ function initializePlayer(videoId) {
 
 function onPlayerReady(event) {
     console.log('Player is ready');
-    showBanner('Video player ready!', 'success');
+    showBanner('Video loaded successfully!', 'success');
     event.target.playVideo();
 }
 
@@ -212,13 +250,34 @@ function onPlayerStateChange(event) {
 
 function onPlayerError(event) {
     console.error('YouTube Player Error:', event.data);
-    showBanner('Error loading video. Please try another video.', 'error');
+    let errorMessage = 'Error loading video. ';
+    
+    switch(event.data) {
+        case 2:
+            errorMessage += 'Invalid video ID.';
+            break;
+        case 5:
+            errorMessage += 'HTML5 player error.';
+            break;
+        case 100:
+            errorMessage += 'Video not found or private.';
+            break;
+        case 101:
+        case 150:
+            errorMessage += 'Video cannot be embedded.';
+            break;
+        default:
+            errorMessage += 'Please try another video.';
+    }
+    
+    showBanner(errorMessage, 'error');
 }
 
 function extractVideoId(url) {
     const patterns = [
         /youtube\.com\/watch\?v=([a-zA-Z0-9_-]{11})/,
         /youtu\.be\/([a-zA-Z0-9_-]{11})/,
+        /youtube\.com\/embed\/([a-zA-Z0-9_-]{11})/,
         /^([a-zA-Z0-9_-]{11})$/
     ];
     for (let pattern of patterns) {
@@ -233,7 +292,7 @@ function isValidYoutubeUrl(url) {
 }
 
 function togglePlayPause() {
-    if (!player || !player.getPlayerState) {
+    if (!player || typeof player.getPlayerState !== 'function') {
         showBanner('No video loaded', 'error');
         return;
     }
